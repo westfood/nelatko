@@ -214,6 +214,11 @@ function cleanHtml(html, baseUrl) {
   output = output.replace(/<form\b[\s\S]*?<\/form>/gi, '');
   output = output.replace(/<li\b[^>]*>\s*<a\b[^>]*href=["'][^"']*["'][^>]*>\s*(?:Kontakt|Návštěvní kniha)\s*<\/a>\s*<\/li>\s*/gi, '');
   output = output.replace(/<li\b[^>]*>\s*<a\b[^>]*href=["'][^"']*(?:blueboard\.cz\/kniha|\/contact\/?|\/guestbook\/?|\/node\/8(?:["'?#/]|$))[^"']*["'][^>]*>[\s\S]*?<\/a>\s*<\/li>\s*/gi, '');
+  output = output.replace(/(<link\b[^>]*?\shref=)(["'])(.*?)\2/gi, (match, prefix, quote, href) => {
+    const resolved = resolveUrl(decodeHtmlEntities(href).trim(), baseUrl);
+    if (!resolved || resolved.host !== SOURCE_HOST || isForbiddenUrl(resolved)) return match;
+    return `${prefix}${quote}${escapeHtmlAttribute(toPageRelativeHref(publicAssetHref(resolved), baseUrl))}${quote}`;
+  });
   output = output.replace(/<a\b([^>]*?)href=(["'])(.*?)\2([^>]*)>([\s\S]*?)<\/a>/gi, (match, before, quote, href, after, label) => {
     const resolved = resolveUrl(decodeHtmlEntities(href).trim(), baseUrl);
     const text = stripTags(label);
@@ -232,26 +237,26 @@ function cleanHtml(html, baseUrl) {
     const rewritten = isLikelyHtmlLink(href, resolved)
       ? publicHtmlHref(resolved)
       : publicAssetHref(resolved);
-    return `<a${before}href=${quote}${escapeHtmlAttribute(rewritten)}${quote}${after}>${label}</a>`;
+    return `<a${before}href=${quote}${escapeHtmlAttribute(toPageRelativeHref(rewritten, baseUrl))}${quote}${after}>${label}</a>`;
   });
 
   output = output.replace(/\s(?:src|action)=(["'])(.*?)\1/gi, (match, quote, href) => {
     const resolved = resolveUrl(decodeHtmlEntities(href).trim(), baseUrl);
     if (!resolved || resolved.host !== SOURCE_HOST) return match;
     if (isForbiddenUrl(resolved)) return '';
-    return `${match.startsWith(' action') ? ' action' : ' src'}=${quote}${escapeHtmlAttribute(publicAssetHref(resolved))}${quote}`;
+    return `${match.startsWith(' action') ? ' action' : ' src'}=${quote}${escapeHtmlAttribute(toPageRelativeHref(publicAssetHref(resolved), baseUrl))}${quote}`;
   });
 
   output = output.replace(/@import\s+(["'])(.*?)\1/gi, (match, quote, href) => {
     const resolved = resolveUrl(decodeHtmlEntities(href).trim(), baseUrl);
     if (!resolved || resolved.host !== SOURCE_HOST || isForbiddenUrl(resolved)) return '';
-    return `@import ${quote}${escapeHtmlAttribute(publicAssetHref(resolved))}${quote}`;
+    return `@import ${quote}${escapeHtmlAttribute(toPageRelativeHref(publicAssetHref(resolved), baseUrl))}${quote}`;
   });
 
   output = output.replace(/url\(\s*(["']?)(.*?)\1\s*\)/gi, (match, quote, href) => {
     const resolved = resolveUrl(decodeHtmlEntities(href).trim(), baseUrl);
     if (!resolved || resolved.host !== SOURCE_HOST || isForbiddenUrl(resolved)) return match;
-    return `url(${quote}${escapeHtmlAttribute(publicAssetHref(resolved))}${quote})`;
+    return `url(${quote}${escapeHtmlAttribute(toPageRelativeHref(publicAssetHref(resolved), baseUrl))}${quote})`;
   });
 
   return output;
@@ -387,6 +392,19 @@ function publicAssetHref(url) {
     pathname = `${withoutExtension}-${hashUrl(url.search)}${extension}`;
   }
   return pathname;
+}
+
+function toPageRelativeHref(publicHref, pageUrl) {
+  if (!publicHref.startsWith('/')) return publicHref;
+
+  const pageDirectory = publicHtmlHref(pageUrl).replace(/^\//, '').replace(/\/$/, '');
+  const isDirectoryHref = publicHref.endsWith('/');
+  const targetPath = publicHref.replace(/^\//, '').replace(/\/$/, '');
+  let relativeHref = path.posix.relative(pageDirectory, targetPath);
+
+  if (!relativeHref) relativeHref = '.';
+  if (isDirectoryHref) relativeHref = relativeHref === '.' ? './' : `${relativeHref}/`;
+  return relativeHref;
 }
 
 function repairKnownAssetPath(pathname) {
