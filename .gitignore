@@ -1,0 +1,19 @@
+# Original FTP backup and database material. Do not publish these to GitHub.
+DB_BACKUP/
+backup/
+logs/
+public_html/
+_sub/
+
+# Local machine/editor metadata.
+.DS_Store
+.backup
+.cache/
+.config/
+.local/
+export-report/
+static-site/
+
+# Keep the root static artifact and exporter publishable.
+!tools/
+!.github/
