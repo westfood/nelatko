@@ -24,8 +24,9 @@ Then open http://localhost:8080/.
 ## Publish on GitHub Pages
 
 1. Create a new GitHub repository.
-2. Push this workspace with the generated root static files, `tools/`, `.github/`, `.gitignore`, and this README.
-3. In the repository settings, set Pages source to GitHub Actions.
-4. Push to the `main` branch or run the `Deploy static site to GitHub Pages` workflow manually.
+2. Push this workspace with the generated root static files, `tools/`, `.gitignore`, and this README.
+3. In GitHub, open Settings -> Pages.
+4. Under Build and deployment, set Source to `Deploy from a branch`.
+5. Select branch `main` and folder `/ (root)`, then save.
 
-The workflow uploads the repository root as the Pages artifact. Domain setup is intentionally left out so it can be configured separately.
+The site is static and does not need a GitHub Actions workflow. Domain setup is intentionally left out so it can be configured separately.
